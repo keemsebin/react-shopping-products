@@ -14184,7 +14184,7 @@ const ProductItem = ({
   isChecked = true,
   onCartUpdate
 }) => {
-  const imgUrl = imageUrl.includes("image") ? imageUrl : NoImage;
+  const imgUrl = imageUrl.includes("kream") ? NoImage : imageUrl;
   return /* @__PURE__ */ jsxs(StyledProductItemContainer, { children: [
     /* @__PURE__ */ jsx$1(StyledProductItemImage, { src: imgUrl, alt: name }),
     /* @__PURE__ */ jsxs(
