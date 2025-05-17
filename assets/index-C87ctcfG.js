@@ -14184,7 +14184,7 @@ const ProductItem = ({
   isChecked = true,
   onCartUpdate
 }) => {
-  const imgUrl = imageUrl.includes("kream") ? NoImage : imageUrl;
+  const imgUrl = imageUrl.includes("kream") || imageUrl.length !== 0 ? NoImage : imageUrl;
   return /* @__PURE__ */ jsxs(StyledProductItemContainer, { children: [
     /* @__PURE__ */ jsx$1(StyledProductItemImage, { src: imgUrl, alt: name }),
     /* @__PURE__ */ jsxs(
@@ -14778,7 +14778,7 @@ const ProductListPage = () => {
               gap: "0px",
               padding: "10px 25px",
               children: [
-                /* @__PURE__ */ jsx$1(Select, { maxWidth: 100, selectedOptions: CATEGORY[categorySelect], children: Object.entries(CATEGORY).map(([key, value], idx) => /* @__PURE__ */ jsx$1(
+                /* @__PURE__ */ jsx$1(Select, { maxWidth: 110, selectedOptions: CATEGORY[categorySelect], children: Object.entries(CATEGORY).map(([key, value], idx) => /* @__PURE__ */ jsx$1(
                   Select.Option,
                   {
                     option: value,
@@ -14823,7 +14823,7 @@ const ProductListPage = () => {
                 `,
                   children: /* @__PURE__ */ jsx$1(Loading, { size: "xl" })
                 }
-              ) : /* @__PURE__ */ jsx$1(ProductListContainer, { children: filteredData.map((item) => /* @__PURE__ */ jsx$1(
+              ) : filteredData.length > 0 ? /* @__PURE__ */ jsx$1(ProductListContainer, { children: filteredData.map((item) => /* @__PURE__ */ jsx$1(
                 ProductItem,
                 {
                   isChecked: item.isChecked,
@@ -14833,7 +14833,18 @@ const ProductListPage = () => {
                   onCartUpdate: () => toggleCartItem(item.id)
                 },
                 item.id
-              )) })
+              )) }) : /* @__PURE__ */ jsx$1(
+                Text,
+                {
+                  type: "Body",
+                  css: css`
+                  padding: 20px;
+                  justify-self: center;
+                  align-self: center;
+                `,
+                  children: "데이터가 존재하지 않습니다."
+                }
+              )
             }
           )
         ]
