@@ -14067,7 +14067,7 @@ const StyledOptionsContainer = newStyled.div`
   top: 100%;
   left: 0;
   background-color: white;
-  border: 1px solid rbga(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
   border-radius: 4px;
   z-index: 10;
@@ -14110,7 +14110,7 @@ const Select = ({ selectedOptions, maxWidth = "200px", children, ...props }) => 
   const [isOpen, setIsOpen] = reactExports.useState(false);
   return /* @__PURE__ */ jsxs(StyledSelectContainer, { maxWidth, onClick: () => setIsOpen(!isOpen), ...props, children: [
     /* @__PURE__ */ jsxs(StyledTriggerButton, { children: [
-      /* @__PURE__ */ jsx$1(Text, { type: "Body", children: selectedOptions ?? "전체" }),
+      /* @__PURE__ */ jsx$1(Text, { type: "Body", children: selectedOptions }),
       /* @__PURE__ */ jsx$1(
         StyledSelectIcon,
         {
@@ -14198,7 +14198,10 @@ const ProductItem = ({
         justifyContent: "center",
         children: [
           /* @__PURE__ */ jsx$1(Text, { type: "Body", weight: "medium", children: name }),
-          /* @__PURE__ */ jsx$1(Text, { type: "Body", weight: "medium", children: price }),
+          /* @__PURE__ */ jsxs(Text, { type: "Body", weight: "medium", children: [
+            price.toLocaleString(),
+            "원"
+          ] }),
           /* @__PURE__ */ jsx$1(Flex, { direction: "row", justifyContent: "flex-end", alignItems: "center", width: "100%", gap: "", children: /* @__PURE__ */ jsx$1(
             IconButton,
             {
@@ -14268,14 +14271,59 @@ const PRICE = {
   asc: "낮은 가격순",
   desc: "높은 가격순"
 };
-const ProductListContainer = ({ children }) => {
-  return /* @__PURE__ */ jsx$1(StyledProductListContainer, { children });
+const useScrollStatus = (ref) => {
+  const [isScrolled, setIsScrolled] = reactExports.useState(false);
+  const handleScroll = reactExports.useCallback(() => {
+    if (ref.current) {
+      setIsScrolled(ref.current.scrollTop > 0);
+    }
+  }, [ref]);
+  reactExports.useEffect(() => {
+    const currentRef = ref.current;
+    if (currentRef) {
+      currentRef.addEventListener("scroll", handleScroll);
+    }
+    return () => {
+      if (currentRef) {
+        currentRef.removeEventListener("scroll", handleScroll);
+      }
+    };
+  }, [handleScroll, ref]);
+  return {
+    isScrolled
+  };
 };
-const StyledProductListContainer = newStyled.div`
+const ProductListContainer = ({ children }) => {
+  const containerRef = reactExports.useRef(null);
+  const { isScrolled } = useScrollStatus(containerRef);
+  return /* @__PURE__ */ jsxs(StyledOuterContainer, { children: [
+    /* @__PURE__ */ jsx$1(StyledGradientOverlay, { isScrolled }),
+    /* @__PURE__ */ jsx$1(StyledProductListContainer, { ref: containerRef, children })
+  ] });
+};
+const StyledOuterContainer = newStyled.div`
+  position: relative;
+  width: 100%;
+  height: 100%;
   max-height: 670px;
+`;
+const StyledGradientOverlay = newStyled.div`
+  position: absolute;
+  top: 0;
+  left: 20px;
+  right: 20px;
+  height: 25px;
+  padding: 0 -20px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.15), transparent);
+  opacity: ${({ isScrolled }) => isScrolled ? 1 : 0};
+  transition: opacity 0.3s ease-in-out;
+  pointer-events: none;
+`;
+const StyledProductListContainer = newStyled.div`
+  width: 100%;
   height: 100%;
   overflow-y: auto;
-  padding: 0 25px;
+  padding: 0 20px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
@@ -14379,7 +14427,7 @@ const addCartItem = async ({ productId, quantity }) => {
   const data = await fetcher.get({
     baseUrl: ENV.BASE_URL + "cart-items",
     token: ENV.TOKEN
-  }).then((res) => res);
+  });
   return data.content;
 };
 const getCartItemList = async ({
@@ -14391,7 +14439,7 @@ const getCartItemList = async ({
     baseUrl: ENV.BASE_URL + "cart-items",
     token: ENV.TOKEN,
     query: { page, size, sort }
-  }).then((res) => res);
+  });
   return data.content;
 };
 const deleteCartItem = async (cartItemId) => {
@@ -14463,7 +14511,7 @@ const ToastProvider = ({ children }) => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
-    setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       setToast("");
       timerRef.current = null;
     }, 3e3);
@@ -14477,17 +14525,27 @@ const useApiRequest = () => {
   const [isLoading, setIsLoading] = reactExports.useState(false);
   const { showToast } = reactExports.useContext(ToastContext);
   const handleRequest = reactExports.useCallback(
-    async (apiCall, setCallback, errorData, options) => {
+    async ({
+      apiCall,
+      onSuccess,
+      onError,
+      options
+    }) => {
       try {
         setIsLoading(true);
         if (options && options.delay) {
           await new Promise((resolve) => setTimeout(resolve, options.delay));
         }
         const data = await apiCall();
-        return setCallback ? setCallback(data) : data;
+        onSuccess(data);
+        return;
       } catch (err) {
-        showToast(err.message);
-        errorData && setCallback(errorData);
+        if (onError) {
+          onError(err);
+        }
+        if (!onError) {
+          showToast(err.message);
+        }
         throw err;
       } finally {
         setIsLoading(false);
@@ -14501,41 +14559,56 @@ const useCart = () => {
   const [cartData, setCartData] = reactExports.useState([]);
   const { handleRequest } = useApiRequest();
   const fetchCartProductData = reactExports.useCallback(async () => {
-    return handleRequest(
-      () => getCartItemList({
-        page: 0,
-        size: 50
-      }),
-      (data) => {
-        setCartData(data);
-        return data;
-      }
-    );
+    try {
+      const cartProductData = handleRequest({
+        apiCall: () => getCartItemList({
+          page: 0,
+          size: 50
+        }),
+        onSuccess: (data) => {
+          setCartData(data);
+          return data;
+        }
+      });
+      return cartProductData;
+    } catch (error) {
+      return [];
+    }
   }, [handleRequest]);
   const addToCart = reactExports.useCallback(
     async (productId, quantity = 1) => {
-      return handleRequest(
-        () => addCartItem({
-          productId,
-          quantity
-        }),
-        (data) => {
-          setCartData(data);
-          return data.length;
-        }
-      );
+      try {
+        const addRequest = handleRequest({
+          apiCall: () => addCartItem({
+            productId,
+            quantity
+          }),
+          onSuccess: (data) => {
+            setCartData(data);
+            return data.length;
+          }
+        });
+        return addRequest;
+      } catch (error) {
+        return [];
+      }
     },
     [handleRequest]
   );
   const deleteFromCart = reactExports.useCallback(
     async (cartItemId) => {
-      return handleRequest(
-        () => deleteCartItem(cartItemId),
-        (data) => {
-          setCartData(data);
-          return data.length;
-        }
-      );
+      try {
+        const deleteRequest = handleRequest({
+          apiCall: () => deleteCartItem(cartItemId),
+          onSuccess: (data) => {
+            setCartData(data);
+            return data.length;
+          }
+        });
+        return deleteRequest;
+      } catch (error) {
+        return [];
+      }
     },
     [handleRequest]
   );
@@ -14558,13 +14631,13 @@ const getProductList = async ({
     baseUrl: ENV.BASE_URL + "products",
     token: ENV.TOKEN,
     query: { page, size, sort, category }
-  }).then((res) => res);
+  });
   return data.content;
 };
 const useProductList = () => {
   const [product, setProduct] = reactExports.useState([]);
-  const [categorySelect, setCategorySelect] = reactExports.useState("전체");
-  const [priceSelect, setPriceSelect] = reactExports.useState("전체");
+  const [categorySelect, setCategorySelect] = reactExports.useState("ALL");
+  const [priceSelect, setPriceSelect] = reactExports.useState("asc");
   const { isLoading, handleRequest } = useApiRequest();
   const handleCategorySelect = (category) => {
     setCategorySelect(category);
@@ -14573,20 +14646,24 @@ const useProductList = () => {
     setPriceSelect(price);
   };
   const fetchProductData = reactExports.useCallback(async () => {
-    return handleRequest(
-      () => getProductList({
-        page: 0,
-        size: 20,
-        sort: priceSelect !== "전체" && priceSelect ? `price,${priceSelect}` : "",
-        category: categorySelect === "전체" ? "" : categorySelect
-      }),
-      (data) => {
-        setProduct(data);
-        return data;
-      },
-      [],
-      { delay: 2e3 }
-    );
+    try {
+      const productData = handleRequest({
+        apiCall: () => getProductList({
+          page: 0,
+          size: 20,
+          sort: `price,${priceSelect}`,
+          category: categorySelect === "ALL" ? "" : categorySelect
+        }),
+        onSuccess: (data) => {
+          setProduct(data);
+          return data;
+        },
+        options: { delay: 2e3 }
+      });
+      return productData;
+    } catch (error) {
+      return [];
+    }
   }, [categorySelect, handleRequest, priceSelect]);
   reactExports.useEffect(() => {
     fetchProductData();
@@ -14701,13 +14778,21 @@ const ProductListPage = () => {
               gap: "0px",
               padding: "10px 25px",
               children: [
-                /* @__PURE__ */ jsx$1(Select, { maxWidth: 100, selectedOptions: categorySelect, children: Object.entries(CATEGORY).map(([_, value], idx) => /* @__PURE__ */ jsx$1(Select.Option, { option: value, onSelectOption: handleCategorySelect, children: value }, idx)) }),
+                /* @__PURE__ */ jsx$1(Select, { maxWidth: 100, selectedOptions: CATEGORY[categorySelect], children: Object.entries(CATEGORY).map(([key, value], idx) => /* @__PURE__ */ jsx$1(
+                  Select.Option,
+                  {
+                    option: value,
+                    onSelectOption: () => handleCategorySelect(key),
+                    children: key
+                  },
+                  idx
+                )) }),
                 /* @__PURE__ */ jsx$1(Select, { maxWidth: 125, selectedOptions: PRICE[priceSelect], children: Object.entries(PRICE).map(([key, value], idx) => /* @__PURE__ */ jsx$1(
                   Select.Option,
                   {
                     option: value,
                     onSelectOption: () => handlePriceSelect(key),
-                    children: value
+                    children: key
                   },
                   idx
                 )) })
