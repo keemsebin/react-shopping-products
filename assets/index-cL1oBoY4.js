@@ -16229,7 +16229,9 @@ const useControlQuantity = (productId) => {
   const isInCart = !!cartItem;
   const increaseQuantity = async () => {
     if (cartItem && currentQuantity >= cartItem.product.quantity) {
-      showToast("재고가 부족합니다.");
+      showToast(
+        `"${cartItem == null ? void 0 : cartItem.product.name}" 상품의 최대 구매 수량은 ${cartItem.product.quantity}개 입니다.`
+      );
       return;
     }
     try {
@@ -16246,7 +16248,7 @@ const useControlQuantity = (productId) => {
         );
       }
     } catch (error) {
-      showToast("장바구니에서 상품를 더할 수 없습니다.");
+      showToast("장바구니에 상품을 추가할 수 없습니다.");
     }
   };
   const removeCartItem = async () => {
@@ -16255,7 +16257,7 @@ const useControlQuantity = (productId) => {
         await cartData.mutate(() => deleteCartItem(cartItem.id), getCartItemList);
       }
     } catch (error) {
-      showToast("장바구니에서 상품을 삭제할 수 없습니다.");
+      showToast(`장바구니에서 ${cartItem == null ? void 0 : cartItem.product.name} 상품을 삭제할 수 없습니다.`);
     }
   };
   const decreaseQuantity = async () => {
@@ -16270,7 +16272,7 @@ const useControlQuantity = (productId) => {
         await removeCartItem();
       }
     } catch (error) {
-      showToast("재고가 부족합니다.");
+      showToast(`장바구니에서 ${cartItem == null ? void 0 : cartItem.product.name} 상품을 삭제할 수 없습니다.`);
     }
   };
   return { isInCart, currentQuantity, increaseQuantity, decreaseQuantity, removeCartItem };
@@ -16914,7 +16916,7 @@ const App = () => {
   return /* @__PURE__ */ jsx$1(ToastProvider, { children: /* @__PURE__ */ jsx$1(DataProvider, { children: /* @__PURE__ */ jsx$1(ProductListPage, {}) }) });
 };
 async function enableMocking() {
-  const { worker } = await __vitePreload(() => import("./browser-BzqdVQVL.js"), true ? [] : void 0);
+  const { worker } = await __vitePreload(() => import("./browser-DYQv1FB_.js"), true ? [] : void 0);
   return worker.start({
     serviceWorker: {
       url: "/react-shopping-products/mockServiceWorker.js"
